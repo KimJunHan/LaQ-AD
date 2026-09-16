@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.so
+build/
+*.egg-info/
+work_dirs/
+results/
+evaluation/
+data/
+ckpts/
+*.pth
+*.pkl
+*.log
+vis_*/
