@@ -84,16 +84,18 @@ projected 3D locations---so context that is visible but not geometrically
 salient, such as an occluded pedestrian implied by a stopped bus, has no path
 into the representation. LaQ-AD injects the hidden token sequence of a
 pretrained vision--language model (VLM) into that shared query pool through
-cross-attention with a \emph{zero-initialized gate} decomposed over decoder
-layers, tasks and channels: the fused model is bit-identical to its unfused
-counterpart at step zero, and caching intermediate-layer VLM tokens offline
-keeps the VLM off the training critical path. The same construction isolates
+cross-attention with a \emph{zero-initialized channel-wise gate}: the fused
+model is identical to its unfused counterpart at step zero by construction,
+and caching the VLM tokens offline keeps the VLM off the training critical
+path. The same construction isolates
 the language contribution without retraining---feeding each sample
 \emph{another} sample's tokens costs \measured{1.7} detection mAP and
 \measured{10.6} map mAP points, so the model acts on scene-specific language
 content rather than on a learned constant. Gains concentrate on categories
-whose identity is contextual (construction vehicle \measured{$+37$}\%,
-pedestrian crossing \measured{$+41$}\%, car \measured{$+1.4$}\%). On nuScenes,
+whose identity is contextual: construction vehicle \measured{$+37$}\% and the
+pedestrian-crossing map class \measured{$+41$}\% versus car \measured{$+1.4$}\%
+(relative to the mismatched-token control; the rare-class bases are low, so
+\measured{$+37$}\% is \measured{$+0.017$} AP). On nuScenes,
 LaQ-AD reaches \measured{0.3967} detection mAP, \measured{0.4952} NDS,
 \measured{0.5337} map mAP and \measured{0.3425} AMOTA. Code is available at
 \url{https://github.com/KimJunHan/LaQ-AD}.
@@ -132,9 +134,9 @@ detection, multi-task learning
 정보를 얼마나 반영할지 채널별로 정하는 학습 가능한 계수---를 곱해 잔차로 더하되, 이
 게이트를 0 에서 출발시킨다(영초기화). 학습 시작 시점에는 게이트가 0 이라
 언어가 전혀 더해지지 않으므로 모델은 기반 모델과 완전히 같고, 학습이 진행되면 언어가
-도움이 되는 채널만 스스로 열린다. 따라서 이후 생기는 모든 성능 차이는 언어 경로의
-몫으로 가려낼 수 있고, 학습 후 게이트를 도로 0 으로 잠그면 언어 없는 모델이 즉시
-복원된다.
+도움이 되는 채널만 스스로 열린다. 학습 후 게이트를 도로 0 으로 잠그면 \emph{학습된
+가중치의} 비융합 순전파가 즉시 복원된다---언어 없이 학습했을 모델과 같지는 않으므로,
+본 논문은 이를 귀속의 상한이 아니라 통제의 출발점으로만 쓴다.
 
 본 논문의 기여는 다음과 같다.
 \begin{itemize}
@@ -143,18 +145,20 @@ detection, multi-task learning
         쿼리와 한 디코더 안에서 상호작용시켜 성능을 얻는 구조다. 본 논문은 이 구조를
         바꾸지 않고, 동결된 VLM 의 토큰을 교차 어텐션과 영초기화 게이트로 공유 쿼리 풀에
         주입하는 계층 하나만 추가한다. 토큰은 표본마다 미리 계산해 캐시하므로 학습 중
-        VLM 을 실행할 필요가 없고 추가 비용은 $+0.53$M 파라미터에 그친다---단일 GPU
+        VLM 을 실행할 필요가 없고 추가 비용은 $+0.66$M 파라미터에 그친다---단일 GPU
         학습과 차량 탑재의 연산 제약을 겨냥한 선택이다. 또한 언어는 행동·궤적을 직접
-        생성하지 않고 검증 가능한 중간 출력(검출·지도)을 거쳐서만 작용하며 게이트로
-        줄일 수 있으므로, 종단간 구조 안에서도 안전 논증은 모듈러 쪽에 남는다.
-  \item 언어의 효과를 재학습 없이, 보증 가능한 형태로 잰다. 융합은 초기화
-        시점에 수학적 항등($F'{=}F$, 비트 단위 일치 검증)이고 언제든 $g{=}0$ 으로 언어
-        없는 모델이 복원되므로, 한 번 학습한 체크포인트 하나로 언어의 기여를 nuScenes
-        검출·매핑·추적에서 분리 측정하고 회귀 시험할 수 있다. 어긋난 토큰 통제는 잘못된
-        언어가 들어올 때의 거동(위치 정밀도·재현율 동반 악화)까지 정량화한다.
+        생성하지 않는다---공유 쿼리 풀의 특징을 변조할 뿐이고 그 영향은 게이트로 끌 수
+        있다. 다만 주입은 과제 분리 이전이라 계획·자차 쿼리에도 닿으므로, 언어가 인지
+        경로만 거친다고 주장하지는 않는다.
+  \item 언어의 효과를 재학습 없이 잰다. 융합은 구성상 초기화 시점에 항등($F'{=}F$)이고
+        게이트를 $0$ 으로 두면 학습된 가중치의 비융합 순전파가 복원되므로, 한 번 학습한
+        체크포인트 하나로 언어의 기여를 nuScenes 검출·매핑·추적에서 분리 측정할 수 있다.
+        본 논문이 쓰는 통제는 어긋난 토큰이며, 잘못된 언어가 들어올 때의 거동(위치
+        정밀도·재현율 동반 악화)까지 정량화한다.
   \item 롱테일 실패 지점을 찾아 진단한다. 크고 드문 두 범주(트레일러·공사차량)의
-        낮은 성능이 클래스 혼동이 아니라 앵커 크기가 전부 같아 큰 물체를 아예 찾지
-        못하는 구조적 문제임을 재현 가능한 절차로 보이고, 언어 이득이 정확히 맥락 의존적
+        낮은 성능이 클래스 혼동이 아니라 \emph{검출 실패}임을 보이고, 트레일러의 경우
+        그 실패가 거리에 따라 나타나---앵커 크기가 전부 같아 먼 대형차를 작은 발자국으로
+        훑는 구조적 문제와 일치함을---재현 가능한 절차로 제시하며, 언어 이득이 정확히 맥락 의존적
         희소 범주에 집중됨(공사차량 $+37$\%)과 실패한 네 개입을 그대로 보고한다.
 \end{itemize}
 
@@ -163,13 +167,13 @@ detection, multi-task learning
 연구~\cite{tian2024drivevlm,xu2024drivegpt4,sima2024drivelm}는 VLM 이 궤적·서술을
 생성해 제어에 직접 관여하지만, 본 설계의 VLM 은 텍스트를 한 글자도 생성하지 않는다.
 은닉 토큰이 표현 수준에서만 주입되므로 잘못된 언어의 영향이 게이트로 감쇠되고, 그
-영향의 크기까지 실험으로 정량화된다(오경보 3배, \ref{sec:ablation}절). 둘째,
+영향의 크기까지 실험으로 정량화된다(\ref{sec:ablation}절). 둘째,
 \emph{주입 지점}이 다르다. 계획기 하나가 아니라 단일 디코더의 공유 쿼리 풀에 각 계층
-내부에서 주입되어 검출·지도·계획이 같은 언어 신호를 공유한다---매핑이 검출의 두 배
-이득을 얻는 결과는 이런 다중 과제 주입에서만 관찰된다. 셋째, \emph{결합 자체가 측정
-장치}다. 계층$\times$과제$\times$채널로 분해된 영초기화 게이트와 결정적 오프라인 캐시
-덕분에 어느 설정에서든 ``언어만 뺀 같은 모델''이 복원되어 기여가 검증 가능하다---VLM
-이 생성한 출력이 제어에 섞여 들어가는 결합에서는 성립하지 않는 성질이다.
+내부에서 주입되어 검출·지도·계획이 같은 언어 신호를 공유한다---본 설정에서 매핑의
+상대 이득이 검출의 \measured{5.7}배다. 셋째, \emph{결합 자체가 측정 장치}다.
+영초기화 게이트와 결정적 오프라인 캐시 덕분에 ``언어만 뺀 같은 모델''을 재학습 없이
+복원할 수 있다---VLM 이 생성한 출력이 제어에 섞여 들어가는 결합에서는 성립하지 않는
+성질이다.
 
 % =====================================================================
 \section{관련 연구}
@@ -230,12 +234,11 @@ $f_i\in\mathbb{R}^{256}$ 과 앵커(객체는 3차원 상자, 지도는 폴리�
 기하, 교통 상태, 주행에 유관한 단서를 서술하라''---과 함께 입력해 표본마다 한 번
 실행하고, 은닉 상태 $H_t \in \mathbb{R}^{L \times d_{\text{vlm}}}$ ($L{=}1159$,
 $d_{\text{vlm}}{=}1536$)을 \texttt{bfloat16} 으로 저장한다. 영상은 카메라당
-$200{\times}28{\times}28$ 화소로 고정 리사이즈되어 토큰 길이가 일정하고, 지시문이
-고정이므로 캐시는 결정적이다. 추출 계층은 마지막이 아니라 \emph{중간 계층}(28계층 중
-18층)이다. 마지막 계층은 다음 단어 예측이라는 언어적 결론에 맞춰져 영상 내용의 비중이 줄어드는
-반면, 중간 계층에는 영상에 실제로 무엇이 있는지가 가장 진하게 남아 있다---본 융합에
-필요한 것은 후자다. 순전파 한 번에 전 계층이 계산되므로 인접 계층(14·22층)도 같은 비용에
-저장해 \ref{sec:onerun}절의 계층 소거에 쓴다. VLM 과 입력이 고정이므로 $H_t$ 는 에폭에
+$200{\times}28{\times}28$ 화소 예산으로 고정 리사이즈되어(시각 토큰은 병합 후 카메라당
+$180$개) 토큰 길이가 일정하고, 지시문이
+고정이므로 캐시는 결정적이다. 본 논문이 보고하는 모델은 마지막 계층의 은닉 상태를 쓴다. 순전파 한 번에 전 계층이
+계산되므로 중간 계층(14·18·22층)도 같은 비용에 저장해 두었으나, 어느 계층이 융합에
+유리한지는 본 논문의 평가 범위 밖이며 후속 작업으로 남긴다. VLM 과 입력이 고정이므로 $H_t$ 는 에폭에
 따라 변하지 않는다. 전체 데이터셋에 한 번 계산해 두고(nuScenes 기준 $34{,}149$개 텐서,
 $114$\,GB) 학습 중에는 디스크에서 읽으므로 학습 루프는 VLM 을 인스턴스화하지 않는다.
 캐싱은 VLM 을 주행 과제에 맞춰 미세조정할 가능성을 스스로 막는 의도적 제약이다. 그
@@ -245,20 +248,19 @@ $114$\,GB) 학습 중에는 디스크에서 읽으므로 학습 루프는 VLM �
 \subsection{영초기화 게이트를 둔 언어--쿼리 교차 어텐션}
 디코더의 어느 계층에서 전체 쿼리 풀의 인스턴스 특징을
 $F \in \mathbb{R}^{B \times N \times d}$, 해당 표본의 캐시된 VLM 토큰을 $H$ 라 하자.
-$H$ 를 2층 MLP($1536\!\to\!512\!\to\!256$, GELU---한 번에 6배 압축하는 병목을 피한다)로
-사영한 뒤 $A = \mathrm{MHA}(Q{=}FW_q,\, K{=}HW_k,\, V{=}HW_v)$ 를 메모리 효율적
+$H$ 를 선형 사영($1536\!\to\!256$)과 LayerNorm 으로 정렬한 뒤 $A = \mathrm{MHA}(Q{=}FW_q,\, K{=}HW_k,\, V{=}HW_v)$ 를 메모리 효율적
 어텐션~\cite{dao2022flashattention}으로 계산한다. 융합 출력은 \emph{게이트가 걸린
-잔차}이며, 게이트는 채널 축만이 아니라 디코더 계층과 과제 축으로 분해된다:
+잔차}이며, 게이트는 채널별로 학습되는 0 초기화 벡터다(0 초기화 잔차 게이트는
+LLaMA-Adapter 의 zero-init attention~\cite{llamaadapter2023}과 같은 계보다):
 \begin{equation}
   F' = F + g \odot A, \qquad
-  g \in \mathbb{R}^{L_{\text{dec}} \times S \times d},\;\; g^{(0)} = \mathbf{0},
+  g \in \mathbb{R}^{d},\;\; g^{(0)} = \mathbf{0},
   \label{eq:gate}
 \end{equation}
-$L_{\text{dec}}{=}6$ 은 디코더 계층 수, $S{=}3$ 은 과제 구간(객체·지도·계획)이다. 언어가
-유용한 정도는 디코더 깊이마다(계층별 게이트는 LLaMA-Adapter 의 zero-init
-attention~\cite{llamaadapter2023}과 같은 구조), 과제마다(매핑이 검출의 두 배 이상,
-\ref{sec:ablation}절) 다르므로, 어디에 언어를 쓸지는 학습이 결정하게 하고 학습된
-$6\times3$ 게이트 지도를 분석 결과로 삼는다. 식~\eqref{eq:gate}은 두 결과를 낳는다.
+어느 채널에 언어를 얼마나 받아들일지는 학습이 결정하게 하고, 학습된 $g$ 의 분포를 분석
+결과로 삼는다(\ref{sec:ablation}절). 같은 형식은 디코더 계층과 과제 축으로도 일반화되지만
+($g \in \mathbb{R}^{L\times S\times d}$), 본 논문이 보고하는 수치는 모두 채널 축 형태에서
+나온 것이며 분해 게이트의 평가는 후속 작업이다. 식~\eqref{eq:gate}은 두 결과를 낳는다.
 초기화 시점에 $F' = F$ 가 정확히 성립해 융합·비융합 모델이 같은 함수이고, 이후 어느
 시점이든 $g{=}0$ 으로 두면 \emph{학습된 가중치의} 비융합 순전파가 복원된다---게이트는
 안정화 장치이자 측정 도구다(\ref{sec:ablation}절). 계층은 가변형 집약과 전방향 신경망
@@ -270,7 +272,9 @@ $6\times3$ 게이트 지도를 분석 결과로 삼는다. 식~\eqref{eq:gate}�
 1단계(인지)는 검출과 온라인 매핑을 지도학습하며, 계획·자차 쿼리는 디코더 구성을
 최종 모델과 일치시키기 위해 풀에 존재하되 손실 가중치를 0 으로 둔다. 100 에폭, 유효 배치
 $64$, AdamW~\cite{loshchilov2019adamw} $2\!\times\!10^{-4}$, 코사인
-감쇠~\cite{loshchilov2017sgdr}와 $500$ 스텝 준비 구간을 쓴다. 2단계(모션)는
+감쇠~\cite{loshchilov2017sgdr}와 $500$ 스텝 준비 구간을 쓴다. 보고하는 모델의 1단계는
+$704\!\times\!256$ 에서 이 일정을 마친 뒤 $896\!\times\!448$ 로 $12$ 에폭 미세조정한
+것이다(같은 해상도로 처음부터 학습하는 일정은 진행 중이다). 2단계(모션)는
 모션 쿼리·손실과 계획·자차 손실을 켜고 1단계 가중치에서 시작한다(10 에폭, 유효 배치
 $48$, 입력 해상도는 1단계와 동일). 이 전환을 아무 보정 없이---모든 파라미터를 1단계의 최고 학습률로 되돌리고 모션 손실을
 기본 가중치 그대로 두고---수행하면 인지 성능이 크게 떨어짐을 관측했다: 검출 mAP \measured{$-4.9$}\%, 지도 mAP
@@ -290,17 +294,22 @@ nuScenes 는 $12$ 스텝이고 손실이 지평 길이로 나눠지지 않으므
 \subsection{평가 산출 프로토콜}
 검출·매핑은 각 헤드의 출력을 그대로 평가하며, 검출은 분류 점수 상위 300개를 표본당
 제출한다. \emph{추적은 별도 모듈 없이} 시간적 인스턴스 뱅크가 프레임 간에 유지하는
-인스턴스 식별자를 트랙 식별자로 쓰는 후처리라 어느 단계의 체크포인트로도 산출된다. 트랙 제출의 점수 임계값 $0.15$ 는 검증 분할에서 선택했음을 명시한다---더 낮거나 높은
-임계값은 모두 AMOTA 를 떨어뜨렸다.
+인스턴스 식별자를 트랙 식별자로 쓰는 후처리라 어느 단계의 체크포인트로도 산출된다. 트랙 제출의 점수 임계값 $0.15$ 는 검증 분할에서 선택했으며, 보고 모델의 AMOTA 는
+$0.10$/$0.15$/$0.20$ 에서 각각 \measured{0.3255}/\measured{0.3425}/\measured{0.3274}
+다---선택값이 최댓값이므로 이 수치는 검증 분할에 맞춰 조정된 운용점임을 밝혀 둔다(기준
+문헌의 임계값은 공개되어 있지 않다).
 
 \subsection{단일 체크포인트 소거 프로토콜}
 \label{sec:onerun}
-본 설계의 부산물로, 모든 소거가 \emph{한 번의 학습에서 나온 체크포인트 하나}로 산출된다.
-게이트가 계층$\times$과제$\times$채널로 분해된 0 초기화 잔차이므로 (i) 전체 영점화 =
-언어 없는 순전파, (ii) 특정 계층만 영점화 = 그 계층의 기여, (iii) 특정 과제 구간만
-영점화 = 그 과제의 기여가 재학습 없이 복원·측정되고, (iv) 캐시 계층 효과는 추론 시 캐시
-디렉터리 교체(18$\leftrightarrow$14/22/마지막)로, (v) 어긋난 토큰 통제는 캐시 파일명을 뒤섞되 어떤 표본도 자기 토큰을 받지 않는 순열로
-재연결해, 모든 표본이 다른 장면의 토큰을 받게 구성한다. 각각 검증 분할 추론 1회의 비용이며 새 학습은 없다.
+본 설계의 부산물로, 언어 경로에 대한 소거가 \emph{한 번의 학습에서 나온 체크포인트
+하나}로 산출된다(표~\ref{tab:negative}의 구조 개입들은 별도 학습이 필요한 비교로, 여기
+해당하지 않는다).
+게이트가 0 초기화 잔차이므로 (i) 영점화 = 학습된 가중치의 비융합 순전파가 재학습 없이
+복원되고, (ii) 어긋난 토큰 통제는 캐시 파일명을 뒤섞되 어떤 표본도 자기 토큰을 받지 않는
+순열로 재연결해 모든 표본이 다른 장면의 토큰을 받게 구성한다. 각각 검증 분할 추론 1회의
+비용이며 새 학습은 없다. 본 논문이 보고하는 통제는 (ii)다---(i)은 학습 중 언어에 맞춰진
+가중치를 그대로 두고 경로만 끄는 것이라 언어 없이 \emph{학습된} 모델과 동등하지 않으므로,
+무언어 기준으로는 공개된 기반 모델의 보고값(표~\ref{tab:ablation}(a))을 쓴다.
 구현상 캐시 적재는 실패를 숨기지 않는다---캐시가 없는 표본을 조용히 건너뛰면 일부 표본만
 언어 없이 학습되어 소거 비교 자체가 성립하지 않으므로 즉시 실패시킨다.
 
@@ -321,8 +330,9 @@ FPN~\cite{lin2017fpn} 넥, $896\!\times\!448$ 입력, per-GPU 배치와 기울�
 %   AMOTA·추적 지표는 논문 프로토콜(임계 0.15), minADE 는 car/ped 평균(0.674/0.757).
 \begin{table*}[t]
 \caption{Open-loop results on the nuScenes validation split (\measured{6{,}019}
-samples). Baseline rows are as reported in~\cite{hipad2025}; all are final
-models trained through both stages. Our backbone and schedule match the
+samples). Baseline rows follow the comparison in~\cite{hipad2025} (UniAD's NDS
+is taken from~\cite{hu2023uniad}); all are final models trained through both
+stages. Our backbone and schedule match the
 baseline but the input size differs ($896\!\times\!448$); our claim rests on
 the within-pipeline comparison of Table~\ref{tab:ablation}.}
 \label{tab:main}
@@ -334,10 +344,10 @@ the within-pipeline comparison of Table~\ref{tab:ablation}.}
 \cmidrule(lr){2-3}\cmidrule(lr){4-4}\cmidrule(lr){5-5}\cmidrule(lr){6-6}
  & Det.\ mAP$\uparrow$ & NDS$\uparrow$ & Map mAP$\uparrow$ & AMOTA$\uparrow$ & minADE$\downarrow$ \\
 \midrule
-UniAD~\cite{hu2023uniad}                & 0.380 & 0.359 & --    & --    & -- \\
+UniAD~\cite{hu2023uniad}                & 0.380 & 0.498 & --    & --    & -- \\
 VAD~\cite{jiang2023vad}                 & 0.276 & 0.397 & 0.476 & --    & -- \\
 SparseDrive-S~\cite{sun2024sparsedrive} & 0.418 & 0.525 & 0.551 & 0.386 & 0.62 \\
-HiP-AD~\cite{hipad2025}                 & 0.424 & 0.535 & 0.571 & 0.406 & -- \\
+HiP-AD~\cite{hipad2025}                 & 0.424 & 0.535 & 0.571 & 0.406 & 0.61 \\
 \midrule
 LaQ-AD (ours)
   & \measured{\textbf{0.3967}} & \measured{\textbf{0.4952}} & \measured{0.5337}
@@ -367,11 +377,11 @@ model. (b) and (c) use \emph{identical} trained weights and differ only at
 inference: (b) keeps the fusion pathway active but feeds each sample another
 sample's cached tokens, corrupting the language \emph{content} while
 preserving its statistics. If the gate had merely learned a useful constant
-bias, (b) would match (c). These numbers are independent of the
-literature-gap axis of Table~\ref{tab:main} and the two must not be added or
-subtracted (Sec.~\ref{sec:discussion}). Ablations are run on the same
-final two-stage checkpoint as Table~\ref{tab:main}; AMOTA uses the protocol
-threshold ($0.15$).}
+bias, (b) would match (c). $\Delta$(c$-$b) and $\Delta$(c$-$a) measure
+different things---a within-checkpoint effect and a reproduction gap---and
+must not be added or cancelled (Sec.~\ref{sec:discussion}). Rows (b) and (c)
+come from the same final two-stage checkpoint as Table~\ref{tab:main}; AMOTA
+uses the protocol threshold ($0.15$).}
 \label{tab:ablation}
 \centering
 \small
@@ -383,7 +393,7 @@ threshold ($0.15$).}
   & 0.424 & 0.535 & 0.571 & 0.406 \\
 (b) & mismatched tokens --- pathway on, content wrong
   & \measured{0.3801} & \measured{0.4830} & \measured{0.4276} & \measured{0.3344}\\
-(c) & \quad $+$ language fusion (ours)
+(c) & correct tokens --- LaQ-AD as deployed
   & \measured{\textbf{0.3967}} & \measured{\textbf{0.4952}}
   & \measured{\textbf{0.5337}} & \measured{\textbf{0.3425}}\\
 \midrule
@@ -440,10 +450,7 @@ Tables~\ref{tab:main} and~\ref{tab:ablation}. In relative terms mapping gains
 \label{fig:lang_class}
 \end{figure}
 
-본 절의 측정은 계층·과제 분해를 도입하기 전의 선행 구성---채널 축만의 게이트
-$g\in\mathbb{R}^{256}$, 마지막 계층 캐시, 단층 사영---에서 수행되었고, 분해 게이트
-모델의 소거는 \ref{sec:onerun}절의 프로토콜로 재산출한다. 이 구성에서도 결론에 필요한 성질은 동일하다. 먼저, 학습은 게이트를 닫아 두지
-않았다---0 에서 출발한 \measured{256}개 채널 \emph{전부}가 0 을 벗어났고(음수
+먼저, 학습은 게이트를 닫아 두지 않았다---0 에서 출발한 \measured{256}개 채널 \emph{전부}가 0 을 벗어났고(음수
 \measured{134}·양수 \measured{122}), 분포는 0 주변이 비고 양쪽에 봉우리가 선 이봉
 형태다(그림~\ref{fig:gate}). 즉 게이트는 모든 채널을 같은 비율로 키운 것이 아니라
 채널마다 다른 방향과 크기를 학습했고, 0 으로 남을 수 있었음에도 그러지 않았다.
@@ -452,7 +459,8 @@ $g\in\mathbb{R}^{256}$, 마지막 계층 캐시, 단층 사영---에서 수행�
 표본의 토큰이 도착하는지만 바꾸므로, 학습 중 함께 맞춰진 가중치는 보존되고 들어오는
 언어의 내용만 틀려진다. 게이트가 장면과 무관한 유용한 상수를 더하도록 학습된 것뿐이라면 (b)는
 (c)와 같아야 하지만, 네 지표 모두에서 (b)가 낮다---검출 mAP \measured{$-0.0166$}, 지도
-mAP \measured{$-0.1061$}. 어긋난 토큰은 위치 정밀도(MOTP \measured{$0.6577$}$\to$\measured{$0.6819$})와
+mAP \measured{$-0.1061$}. 어긋난 토큰은 추적 매칭쌍의 위치 정밀도(MOTP
+\measured{$0.6577$}$\to$\measured{$0.6819$})와
 재현율(\measured{$0.4522$}$\to$\measured{$0.4395$})을 함께 악화시킨다(표~\ref{tab:task_ablation}).
 더 엄격한 운용점(임계 $0.2$)에서는 프레임당 오경보가 \measured{$31.1$} 에서
 \measured{$97.1$} 로 3배가 되어 틀린 서술이 함의하는 객체를 환각하는 거동이 드러나지만,
@@ -492,10 +500,11 @@ constr.\ veh.& \measured{0.064} & \measured{1.181} &      & \\
 표~\ref{tab:perclass}은 남은 격차가 산발적이지 않음을 보인다. 첫째, 트레일러
 (\measured{0.070})와 공사차량(\measured{0.064})이 나머지 여덟 범주
 (\measured{0.305}$\sim$\measured{0.674})보다 한 자릿수 낮다. 이 둘만 $0.21$ 이어도 검출 mAP
-\measured{0.425}, 두 범주를 제외하면 검출 mAP \measured{0.4792} / NDS \measured{0.5528}
+\measured{0.425}, 두 범주를 제외하면(TP 오차도 나머지 여덟 범주로 재계산) 검출 mAP
+\measured{0.4792} / NDS \measured{0.5528}
 다(격차가 두 범주에 몰려 있음을 보이기 위한 수치이지 타 모델과의 비교치가
 아니다---기준 문헌은 클래스별 수치를 공개하지 않는다). \emph{희소성}은 설명이 안 된다---트레일러 \measured{20{,}701}개는
-자전거 \measured{9{,}478}개보다 흔한데 점수는 여섯 배 낮다. \emph{주석 손실}도
+자전거 \measured{9{,}478}개보다 흔한데 점수는 \measured{5.7}배 낮다. \emph{주석 손실}도
 아니고(상자 치수 중앙값이 데이터셋 통계와 일치) \emph{변환 필터링}도 아니다(유효성
 플래그 제거율 트레일러 \measured{3.6}\% < 승용차 \measured{11.3}\%). 둘째, 맞힌 상자들 중에서는 방향(요각) 오차가 가장 크다---mAOE \measured{0.5781}, 자전거 \measured{1.213}, 공사차량
 \measured{1.181}.
@@ -505,21 +514,46 @@ $\mathrm{NDS}=\measured{0.532}$ 로 목표선에 근접하며, 남은 차이는 
 \measured{0.6117})에서 온다. 총 격차는 모델 전반에 퍼져 있지 않고 희소
 클래스 재현율과 요각 추정에 집중되어 있다.
 
+\begin{table}[t]
+\caption{Fraction of ground-truth boxes with a same-class prediction within
+$2\,$m, by ego distance (validation split, same checkpoint as
+Table~\ref{tab:main}; $n$ in parentheses). Trailers are found as reliably as
+cars up close and then fall away; construction vehicles are poor at every
+range, so distance alone does not explain their deficit.}
+\label{tab:bydist}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Class & $<$10\,m & 10--20\,m & 20--30\,m & $>$30\,m \\
+\midrule
+car          & \measured{96.4} & \measured{95.9} & \measured{90.8} & \measured{51.0}\\
+bus          & \measured{81.7} & \measured{82.1} & \measured{68.9} & \measured{30.2}\\
+trailer      & \measured{96.2} & \measured{55.8} & \measured{53.7} & \measured{24.2}\\
+constr.\ veh.& \measured{59.3} & \measured{57.0} & \measured{39.6} & \measured{19.5}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{희소 클래스 결손은 크기 사전정보의 실패다}
 \label{sec:anchors}
-표~\ref{tab:negative}의 개입들이 두 범주를 그대로 남겨 두므로 더 추적했다(이 절의
-거리·매칭 진단은 인지 단계 체크포인트에서 측정했다). 이 실패는 다른 클래스와의 혼동이 아니다---정답 상자를 $2\,$m 이내 최근접 예측과
-대응시키면 트레일러의 \measured{92.6}\% 는 근처에 예측이 \emph{아예 없고}, 트럭으로
-잘못 분류된 경우는 \measured{0.4}\% 뿐이다. 즉 헷갈린 것이 아니라 찾지 못한 것이다. 거리에 따른 변화가 원인을 가리킨다. 트레일러는 $10\,$m 이내 \measured{92.3}\% 에서
-$10\sim20\,$m \measured{23.7}\% 로 떨어지는데, 승용차
-(\measured{98.8}$\to$\measured{93.1}\%)나 크기가 비슷한 버스
-(\measured{98.1}$\to$\measured{82.4}\%)에는 없는 절벽이다. 트레일러를 다르게 만드는
-것은 크기다. 가변형 키포인트는 고정 오프셋을 쿼리 \emph{자신의 앵커} 상자로 스케일하므로
+표~\ref{tab:negative}의 개입들이 두 범주를 그대로 남겨 두므로 더 추적했다. 이 실패는
+다른 클래스와의 혼동이 아니다---정답 상자 중심에서 $2\,$m 이내의 예측을 모든 클래스에 걸쳐
+찾으면 트레일러의 \measured{61.8}\% 는 주변에 예측이 \emph{아예 없고}(승용차
+\measured{29.6}\%), 트럭으로 잘못 분류된 경우는 \measured{5.1}\% 에 그친다. 즉 헷갈린
+것이 아니라 찾지 못한 것이다. 거리에 따른 변화가 원인을 가리킨다(표~\ref{tab:bydist}).
+트레일러는 $10\,$m 이내에서는 승용차와 같은 수준으로 찾히지만(\measured{96.2} 대
+\measured{96.4}\%), $10\sim20\,$m 에서 \measured{55.8}\% 로 주저앉는다---같은 구간에서
+승용차는 \measured{95.9}\%, 버스는 \measured{82.1}\% 다. 길이가 긴 순서
+(트레일러 $13.2$\,m $>$ 버스 $\sim11$\,m $>$ 승용차 $4.6$\,m)와 저하 순서가 일치한다. 가변형 키포인트는 고정 오프셋을 쿼리 \emph{자신의 앵커} 상자로 스케일하므로
 앵커 크기가 정제 이전의 추출 영역을 결정하는데, 기준 앵커는 900개 전부 단일 상수
 크기($2.72$\,m)다. 길이 $13.2$\,m 트레일러에 대해 초기 추출 영역은 차체의 약 5분의 1에 불과하다. 물체가
 화면을 가득 채우는 $10\,$m 이내에서는 문제가 되지 않지만, 그 너머에서는 무엇인지
-알아볼 수 없는 작은 조각만 보게 된다. 학습도 이를 복구하지 못한다---$112$ 에폭 후에도 앵커 크기는
-\measured{$1.77$--$3.71\,$m} 에 머문다. 이 진단이 맞다면 실제 크기를 반영한 앵커는 이 범주들을 회복시켜야 한다. 클래스별로
+알아볼 수 없는 작은 조각만 보게 된다. 학습도 이를 복구하지 못한다---$100$ 에폭 후에도 앵커 크기는
+\measured{$1.77$--$3.71\,$m} 에 머문다. 공사차량은 결이 다르다---$10\,$m 이내에서도
+\measured{59.3}\% 에 그쳐 거리만으로 설명되지 않으며, 가장 큰 요각 오차
+(\measured{1.181}\,rad)를 동반한다. 두 범주가 같은 표에서 함께 낮지만 원인이 하나는
+아니다. 이 진단이 맞다면 실제 크기를 반영한 앵커는 이 범주들을 회복시켜야 한다. 클래스별로
 다시 군집화한 앵커(크기 $16.4$\,m 까지)로 미세조정해 이를 확인했고, 예측대로 공사차량 \measured{$+27.4$}\%·트레일러
 \measured{$+12.2$}\% 가 회복된다(표~\ref{tab:negative}). 다만 900개 앵커의 크기를
 고정하면 어떤 클래스든 될 수 있던 유연성을 잃어 중간 범주가 \measured{$6$--$7$}\%
@@ -532,10 +566,11 @@ $10\sim20\,$m \measured{23.7}\% 로 떨어지는데, 승용차
 적응시키는 쪽에 있다.
 
 \begin{table}[t]
-\caption{Interventions aimed at the rare-class deficit. All four fail; these
-negative results are what leave the structural diagnosis of
-Sec.~\ref{sec:anchors}. Changes are relative to the same setting without the
-intervention.}
+\caption{Interventions aimed at the rare-class deficit. None yields a net
+gain: the two anchor edits move the targeted classes in the predicted
+direction but lose more elsewhere, and the other two help neither. Each row is
+a separate training run; changes are relative to the same setting without the
+intervention, measured on that run's own checkpoint.}
 \label{tab:negative}
 \centering
 \small
@@ -563,7 +598,9 @@ $\Delta$(c$-$b)다. $\Delta$(c$-$a)가 음수인 것은 재현 격차 때문이�
 균등하지 않고 체계적이다. 승용차는 \measured{$+1.4$}\% 에 그치고 공사차량은
 \measured{$+37.2$}\% 를 얻는다---승용차는 흔하고 기하적으로 모호하지 않아 자신의 앵커에서
 특징을 추출하는 쿼리가 이미 필요한 것을 갖는 반면, 공사 구역은 표지와 콘이라는 주변
-맥락으로 정체가 결정된다. 과제 수준에서도 같은 구도다(표~\ref{tab:task_ablation}).
+맥락으로 정체가 결정된다. 다만 이 이득은 \ref{sec:anchors}절의 진단과 충돌하지 않는다---그곳의
+병목은 상자를 \emph{제안하지 못하는} 것이고, 언어는 제안된 소수를 더 잘 판별할 뿐이어서
+절대 수준(\measured{0.064})은 그대로다. 과제 수준에서도 같은 구도다(표~\ref{tab:task_ablation}).
 매핑이 \measured{$+24.8$}\% 로 검출(\measured{$+4.4$}\%)의 다섯 배 이상 이득을 보는데, 차선·경계 같은 지도
 요소는 가늘고 반복적이며 생김새보다 도로 규칙에 의해 의미가 정해지므로, 상자 안을 더
 잘 보는 것보다 도로 구조에 대한 서술이 더 도움이 되기 때문이다. 언어는 인지 전반을 균일하게 밀어 올리는 것이 아니라 기하적
@@ -571,7 +608,7 @@ $\Delta$(c$-$b)다. $\Delta$(c$-$a)가 음수인 것은 재현 격차 때문이�
 
 같은 소거를 오차 성분으로 분해하면 언어가 닿는 축과 닿지 않는 축이 갈린다. 어긋난 토큰
 대비 올바른 토큰은 분류(검출 mAP \measured{$+4.4$}\%, 지도 mAP \measured{$+24.8$}\%)와
-방향(mAOE \measured{$-4.3$}\%)을 개선하지만, 위치는 \measured{$-1.1$}\%, 속도는
+방향(mAOE \measured{$-4.3$}\%)을 개선하지만, 검출 위치 오차는 \measured{$-1.1$}\%, 속도는
 \measured{$-0.1$}\% 로 사실상 변하지 않는다. 캐시된 토큰이 일반적인 장면 서술에서 나와
 거리와 속도가 명시적으로 부호화되어 있지 않기 때문으로 보인다. 라이다가 주는 깊이와
 레이더가 주는 도플러 속도가 정확히 이 두 축이므로, 공간적으로 접지된 서술로 토큰을 다시
@@ -581,11 +618,12 @@ $\Delta$(c$-$b)다. $\Delta$(c$-$a)가 음수인 것은 재현 격차 때문이�
 오차 \measured{0.612}\,m 보다 한 자릿수 거칠었다. 언어가 센서를 대신한다면 더 정확한
 수치를 공급해서가 아니라 맥락으로 쿼리 배치를 바꾸어서일 것이다.
 
-실패한 개입 둘도 같은 진단을 가리킨다. 분류 손실 재가중(빈도 역제곱근, 하한
+앵커가 아닌 두 개입도 같은 진단을 가리킨다. 분류 손실 재가중(빈도 역제곱근, 하한
 1)은 트레일러 AP 를 \measured{0.066}$\to$\measured{0.036} 으로 오히려
 낮춘다(표~\ref{tab:negative})---이 범주들의 병목은 손실에서 차지하는 비중이 아니라는 뜻이고, 공사차량의 방향 오차
 \measured{1.45}\,rad(거의 수직 뒤집힘)는 문제가 분류가 아니라 회귀 쪽에 있음을
-시사한다. 지도 쿼리 시간 전파($0\!\to\!33$ 시험)는 지도 mAP 를 \measured{7.1}\% 낮춘다---지도 요소는 자차 중심
+시사한다. 지도 쿼리 시간 전파($0\!\to\!33$ 시험)는 희소 범주에는 영향이 없고 대신 지도
+mAP 를 \measured{7.1}\% 낮춘다(표~\ref{tab:negative}은 검출 열만 싣는다)---지도 요소는 자차 중심
 시야에서 빠르게 벗어나 전파된 인스턴스가 현재 프레임에서 낡았기 때문이며, 기준 설정의
 0 은 간과가 아니라 의도된 선택이다.
 
@@ -598,15 +636,21 @@ $\Delta$(c$-$b)다. $\Delta$(c$-$a)가 음수인 것은 재현 격차 때문이�
 \measured{1.7}점과 지도 mAP \measured{10.6}점을 잃고, 이득은 정확히 맥락으로 정체가
 결정되는 범주에 집중된다. 같은 평가는 융합이 고치지 \emph{못하는} 부분도 정확히 짚어 준다---잔여
 격차는 크고 드문 두 범주에 집중되고 원인은 상수 앵커 크기이며, 추출 기하가 단일 크기에
-묶인 디코더는 어떤 의미 경로를 덧붙여도 그 크기에서 먼 범주를 제대로 다루지 못한다.
+묶인 디코더에서는 의미 경로가 이 두 범주를 가장 크게 끌어올리고도(공사차량
+\measured{$+37.2$}\%) 절대 수준을 바꾸지 못한다---의미만으로는 덮이지 않는 기하의
+한계다.
 
 한계. 절대 수치가 공개된 기준에 못 미친다. \cite{hipad2025}의 nuScenes 데이터
 경로가 비공개라 변환·정답 구성·앵커·지도 평가기가 우리의 재구현이며, 이 격차는 모든 비교 설정에 똑같이 적용되므로 소거 실험의 결론에는 영향을 주지 않지만,
 우리 수치들은 서로 간의 비교로 읽어야 한다. 언어
-없이 학습한 별도 기준 모델은 없다---어긋난 토큰 행은 강력한 통제이나 별도 학습 기준과
-동등하지는 않다. VLM 이 동결·캐시되어 과제 적응이 불가하다. 평가는 nuScenes 개방 루프이며, 개방 루프 계획 지표는 자차 상태 입력만으로도 좋아 보일
-수 있다는 문제~\cite{li2024egostatus}가 알려져 있어 계획 오차 대신 인지·매핑을
-보고한다. 언어가 \emph{주행}에 도움이 됨을 확립하려면 폐쇄 루프
+없이 학습한 \emph{우리} 기준 모델은 없다---무언어 기준으로는 공개된 기반 모델의 보고값을
+쓰고(표~\ref{tab:ablation}(a)), 같은 체크포인트 안의 통제로는 어긋난 토큰을 쓴다. 학습
+후 게이트를 0 으로 잠그는 방법도 있으나 가중치가 이미 언어에 맞춰져 있어 언어 없이
+학습했을 모델과 동등하지 않으므로 기준으로 삼지 않았다. 어긋난 토큰 행은 강력한 통제이나
+별도 학습 기준과 동등하지는 않다. VLM 이 동결·캐시되어 과제 적응이 불가하다. 평가는 nuScenes 개방 루프이며, 개방 루프 계획 지표는 자차 상태 입력만으로도 좋아 보일
+수 있다는 문제~\cite{li2024egostatus}가 알려져 있어 계획 오차는 보고하지 않고
+인지·매핑·모션을 보고한다. 모션은 본 모델의 상대 격차가 가장 큰 축이다(minADE
+\measured{0.716} 대 \measured{0.62}). 언어가 \emph{주행}에 도움이 됨을 확립하려면 폐쇄 루프
 평가~\cite{jia2024bench2drive,dauner2024navsim}가 필요하고, 단일 데이터셋 평가라
 일반화도 검증되지 않았다.
 
