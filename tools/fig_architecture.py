@@ -2,7 +2,7 @@
 
   사용자 요구: 회색조가 너무 공대 스타일 → 게재 논문들처럼 파스텔 색 구분 + 실제
   카메라 썸네일. 모듈 색 규약(범례와 일치):
-    파랑 = HiP-AD 기반(학습됨) / 주황 = 추가분(ours, 학습됨 +0.53M) /
+    파랑 = HiP-AD 기반(학습됨) / 주황 = 추가분(ours, 학습됨 +0.66M) /
     보라+❄ = 동결 VLM(2B) / 회색 점선 = 오프라인 데이터·캐시.
   구성·좌표는 v3(겹침 제거·모듈 그룹·융합 상세 패널)을 유지. IEEE 2단 폭 7.1in.
 """
@@ -70,7 +70,7 @@ def leg(y, txt, fc, ec, lw, ls="-", double=False, snow=False):
         ax.text(76.8, y+0.62, "❄", ha="center", va="center", fontsize=4.6, color=PU_E)
     ax.text(78.9, y+0.62, txt, ha="left", va="center", fontsize=6.4, color=TXT)
 leg(43.7, "trainable — HiP-AD base",        BL_F, BL_E, 0.9)
-leg(41.7, "trainable — ours ($+0.53$M)",    OR_F, OR_E, 1.3)
+leg(41.7, "trainable — ours ($+0.66$M)",    OR_F, OR_E, 1.3)
 leg(39.7, "frozen — Qwen2-VL-2B (2B)",      PU_F, PU_E, 1.0, double=True, snow=True)
 leg(37.7, "offline data / cache (no grad.)", GR_F, GR_E, 0.8, ls=(0, (3, 2)))
 ax.text(75.6, 36.3, "gradients never reach the frozen VLM",
@@ -103,8 +103,8 @@ ax.add_patch(FancyBboxPatch((0.9, 18.85), 12.9, 12.75, boxstyle="round,pad=0.10"
                             fc="#F3F7FC", ec=BL_E, lw=0.9))
 ax.text(7.25, 30.7, "task anchors & queries", ha="center", va="center",
         fontsize=5.8, color=TXT)
-ax.text(7.25, 29.75, "k-means anchors:", ha="center", va="center",
-        fontsize=5.8, color="#7A8694")
+ax.text(7.25, 29.6, "k-means anchors (det/map/plan)", ha="center", va="center",
+        fontsize=4.9, color="#7A8694")
 # det: 3D 상자 글리프
 ax.add_patch(Rectangle((2.5, 27.6), 1.5, 1.0, fc="none", ec=Q_DET, lw=0.9))
 ax.add_patch(Rectangle((2.9, 27.95), 1.5, 1.0, fc="none", ec=Q_DET, lw=0.6, alpha=0.6))
@@ -117,18 +117,13 @@ ax.plot([6.3, 6.9, 7.5, 8.1], [27.7, 28.8, 27.9, 28.8], color=Q_MAP, lw=1.2,
 wx=[10.0, 10.45, 10.95, 11.5, 12.0]; wy=[27.7, 28.05, 28.35, 28.55, 28.7]
 ax.plot(wx, wy, color=Q_PLAN, lw=0.8, ls=(0, (2, 1.5)))
 ax.plot(wx, wy, "o", ms=1.8, mfc=Q_PLAN, mec="none")
-ax.text(3.1, 27.0, "det 900", ha="center", fontsize=4.6, color=TXT)
-ax.text(7.25, 27.0, "map 100", ha="center", fontsize=4.6, color=TXT)
-ax.text(11.4, 27.0, "plan/ego", ha="center", fontsize=4.6, color=TXT)
-arrow(7.25, 26.55, 7.25, 26.3, lw=0.8)
-box(1.65, 24.0, 11.2, 2.2, "anchor encoder (MLP)\n$\\to$ positional emb.",
-    fc=BL_F, ec=BL_E, fs=5.5, lw=0.8)
-arrow(10.35, 23.85, 10.35, 23.5, lw=0.8)
-ax.add_patch(plt.Circle((10.35, 22.85), 0.6, fc="white", ec=BL_E, lw=0.9))
-ax.text(10.35, 22.8, "+", ha="center", va="center", fontsize=6.5, color=TXT)
-ax.text(9.7, 22.85, "learnable instance\nfeature ($256$-d)", ha="right",
-        va="center", fontsize=4.6, color=TXT, linespacing=1.2)
-arrow(10.35, 22.2, 10.35, 21.6, lw=0.8)
+ax.text(3.1, 26.6, "900", ha="center", fontsize=5.0, color=TXT)
+ax.text(7.25, 26.6, "100", ha="center", fontsize=5.0, color=TXT)
+ax.text(11.4, 26.6, "plan/ego", ha="center", fontsize=5.0, color=TXT)
+arrow(7.25, 26.2, 7.25, 25.9, lw=0.8)
+box(1.65, 23.2, 11.2, 2.6, "anchor enc. (MLP) $+$\nlearnable feature ($256$-d)",
+    fc=BL_F, ec=BL_E, fs=5.4, lw=0.8)
+arrow(7.25, 23.05, 7.25, 21.6, lw=0.8)
 seg_bar(2.6, 20.3, 9.3, 1.2, "queries $F$: $N{\\times}256$", 7.25)
 arrow(13.7, 20.85, 16.8, 20.85)
 box(1, 12.2, 12, 5.7, "temporal\ninstance bank\n(600 det propagated)",
@@ -204,20 +199,19 @@ for i in range(34):
     else:
         col, al = "#C9741F", 0.45 + ((i * 5) % 7) / 12.0
     ax.add_patch(Rectangle((bx, 4.25), 0.27, 2.35, fc=col, ec="none", alpha=al))
-ax.text(44.6, 7.35, "tokens $H$ (layer 18)",
+ax.text(44.6, 7.35, "tokens $H$ (last layer)",
         fontsize=5.8, color=TXT, ha="center")
-ax.text(44.6, 3.45, "$1159{\\times}1536$, bf16 $\\to$ cache",
+ax.text(44.6, 3.85, "$1159{\\times}1536$, bf16 $\\to$ cache",
         fontsize=5.4, color="#7A8694", ha="center")
 arrow(36.2, 5.4, 37.1, 5.4, color=A_LANG)
-box(57.0, 2.2, 9.5, 5.8, "2-layer MLP\n$1536\\!\\to\\!512\\!\\to\\!256$",
+box(57.0, 2.2, 9.5, 5.8, "linear $1536\\!\\to\\!256$\n$+$ LayerNorm",
     fc=OR_F, ec=OR_E, lw=1.3, fs=6.2)
 arrow(52.1, 5.2, 56.8, 5.2, color=A_LANG)
 
 # ── 융합 상세 패널: 융합의 실제 계산 단계 ──
 ax.add_patch(FancyBboxPatch((68.5, 0.8), 31.0, 10.0, boxstyle="round,pad=0.10",
                             fc="#FFFDF8", ec="#D9A45B", lw=0.8))
-ax.text(98.9, 10.35, "fusion detail", fontsize=6.0, color="#9A6A28", ha="right")
-ax.text(98.9, 9.72, "(per decoder layer)", fontsize=5.4, color="#9A6A28", ha="right")
+ax.text(69.3, 10.15, "fusion detail", fontsize=5.8, color="#9A6A28", ha="left")
 
 seg_bar(69.3, 7.6, 6.4, 1.3, "queries $F$: $N{\\times}256$", 73.0)
 arrow(75.9, 8.25, 77.4, 8.25, color=A_GEO)
@@ -236,7 +230,7 @@ for r in range(6):
         ax.add_patch(Rectangle((88.4 + c*0.9, 6.95 + r*0.4333), 0.9, 0.4333,
                                fc=gc, ec="white", lw=0.3, alpha=al))
 ax.add_patch(Rectangle((88.4, 6.95), 2.7, 2.6, fc="none", ec=OR_E, lw=1.2))
-ax.text(89.75, 6.3, "$g$: $6{\\times}3{\\times}256$, init $\\mathbf{0}$",
+ax.text(89.75, 6.3, "$g$: $256$-d, init $\\mathbf{0}$",
         fontsize=5.6, color=TXT, ha="center")
 arrow(91.3, 8.25, 92.5, 8.25, color=A_LANG)
 ax.add_patch(plt.Circle((93.4, 8.25), 0.85, fc="white", ec="#3B4653", lw=1.0))
@@ -246,18 +240,18 @@ ax.text(93.4, 8.2, "+", ha="center", va="center", fontsize=7.5, color=TXT)
 ax.add_patch(FancyArrowPatch((73.5, 8.95), (93.3, 9.15), arrowstyle="-|>",
                              mutation_scale=7, lw=0.8, color=A_GEO,
                              connectionstyle="arc3,rad=-0.22"))
-ax.text(83.0, 10.55, "residual $F$", fontsize=5.4, color="#4B5866", ha="center")
+ax.text(84.5, 10.15, "residual $F$", fontsize=5.4, color="#4B5866", ha="center")
 
 arrow(94.3, 8.25, 95.3, 8.25, color="#3B4653")
 seg_bar(95.4, 7.6, 3.7, 1.3, "$F'$", 97.25)
 
 arrow(66.6, 4.4, 81.2, 6.6, lw=1.0, color=A_LANG)
-ax.text(73.4, 4.05, "K, V: $1159{\\times}256$", fontsize=6.2, color=A_LANG, ha="center")
+ax.text(76.5, 4.55, "K, V: $1159{\\times}256$", fontsize=5.6, color=A_LANG, ha="center")
 ax.text(84.0, 2.75,
-        "$A{=}\\mathrm{softmax}(QK^{\\top}\\!/\\sqrt{d})\\,V$;   $F'{=}F+g\\odot A$,   $g\\in\\mathbb{R}^{6\\times3\\times256}$",
+        "$A{=}\\mathrm{softmax}(QK^{\\top}\\!/\\sqrt{d})\\,V$;   $F'{=}F+g\\odot A$,   $g\\in\\mathbb{R}^{256}$",
         fontsize=6.0, color=TXT, ha="center")
 ax.text(84.0, 1.45,
-        "per layer/task/channel gate;  $g\\!=\\!0$ $\\Rightarrow$ unfused forward",
+        "channel-wise gate;  $g\\!=\\!0$ $\\Rightarrow$ unfused forward",
         fontsize=5.8, color=TXT, ha="center")
 ax.plot([49.3, 69.2], [17.9, 10.9], ls=(0, (3, 2)), lw=0.7, color="#C9A26B")
 ax.plot([63.0, 75.5], [17.9, 10.9], ls=(0, (3, 2)), lw=0.7, color="#C9A26B")
