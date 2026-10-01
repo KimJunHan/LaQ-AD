@@ -326,9 +326,8 @@ FPN~\cite{lin2017fpn} 넥, $896\!\times\!448$ 입력, per-GPU 배치와 기울�
 %   AMOTA·추적 지표는 논문 프로토콜(임계 0.15), minADE 는 car/ped 평균(0.674/0.757).
 \begin{table*}[t]
 \caption{Open-loop results on the nuScenes validation split (\measured{6{,}019}
-samples). Baseline rows follow the comparison in~\cite{hipad2025} (UniAD's NDS
-is taken from~\cite{hu2023uniad}); all are final models trained through both
-stages. Our backbone and schedule match the
+samples). Baseline rows are reproduced from the comparison in~\cite{hipad2025};
+all are final models trained through both stages. Our backbone and schedule match the
 baseline but the input size differs ($896\!\times\!448$); our claim rests on
 the within-pipeline comparison of Table~\ref{tab:ablation}.}
 \label{tab:main}
@@ -340,9 +339,10 @@ the within-pipeline comparison of Table~\ref{tab:ablation}.}
 \cmidrule(lr){2-3}\cmidrule(lr){4-4}\cmidrule(lr){5-5}\cmidrule(lr){6-6}
  & Det.\ mAP$\uparrow$ & NDS$\uparrow$ & Map mAP$\uparrow$ & AMOTA$\uparrow$ & minADE$\downarrow$ \\
 \midrule
-UniAD~\cite{hu2023uniad}                & 0.380 & 0.498 & --    & --    & -- \\
+UniAD~\cite{hu2023uniad}                & 0.380 & 0.359 & --    & --    & -- \\
 VAD~\cite{jiang2023vad}                 & 0.276 & 0.397 & 0.476 & --    & -- \\
 SparseDrive-S~\cite{sun2024sparsedrive} & 0.418 & 0.525 & 0.551 & 0.386 & 0.62 \\
+DiFSD~\cite{su2024difsd}                & 0.410 & 0.528 & 0.560 & --    & -- \\
 HiP-AD~\cite{hipad2025}                 & 0.424 & 0.535 & 0.571 & 0.406 & 0.61 \\
 \midrule
 LaQ-AD (ours)
