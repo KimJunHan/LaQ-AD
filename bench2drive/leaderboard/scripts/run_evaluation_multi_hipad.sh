@@ -6,8 +6,8 @@ IS_BENCH2DRIVE=True
 CONFIG_NAME=hipad_b2d_stage2
 
 TEAM_AGENT=bench2drive/leaderboard/team_code/hipad_b2d_agent.py
-TEAM_CONFIG=/workspace/src/HiP-AD/projects/configs/$CONFIG_NAME.py+\
-/workspace/src/HiP-AD/work_dirs/$CONFIG_NAME/latest.pth
+TEAM_CONFIG=/home1/irteam/data-vol1/src/HiP-AD/projects/configs/$CONFIG_NAME.py+\
+/home1/irteam/data-vol1/src/HiP-AD/work_dirs/$CONFIG_NAME/latest.pth
 
 PLANNER_TYPE=traj
 BASE_ROUTES=bench2drive/leaderboard/data/splits16/bench2drive220

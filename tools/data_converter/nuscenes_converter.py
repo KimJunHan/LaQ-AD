@@ -89,7 +89,7 @@ def create_nuscenes_infos(root_path,
     #수정: Path B — nuScenes map GT 추출기 (lazy import, plugin 경로)
     import sys as _sys, os as _os
     _sys.path.insert(0, _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..")))
-    from mmdet3d_plugin.datasets.map_utils.nuscmap_extractor import NuscMapExtractor
+    from mmdet3d_plugin.models.loader.nuscenes.map_utils.nuscmap_extractor import NuscMapExtractor
     nusc_map_extractor = NuscMapExtractor(root_path, roi_size)
     from nuscenes.utils import splits
     available_vers = ['v1.0-trainval', 'v1.0-test', 'v1.0-mini']

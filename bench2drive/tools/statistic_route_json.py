@@ -133,5 +133,5 @@ def statistic_route_json(route_dir, remove_update=False):
         total_completed_routes, len(driving_scores), driving_score, success_score))
 
 if __name__ == '__main__':
-    route_dir = '/workspace/src/HiP-AD/evaluation/hipad_b2d_stage2'
+    route_dir = '/home1/irteam/data-vol1/src/HiP-AD/evaluation/hipad_b2d_stage2'
     statistic_route_json(route_dir)

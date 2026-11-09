@@ -1,7 +1,8 @@
 #!/bin/bash
 # Must set CARLA_ROOT
-export WORK_DIR=/workspace/src/HiP-AD
-export CARLA_ROOT=/workspace/src/carla
+export WORK_DIR=/home1/irteam/data-vol1/src/HiP-AD
+# 수정(2026-10-09): CARLA 경로를 B2D_CARLA_ROOT 로 덮어쓸 수 있게 한다(셸 환경의 CARLA_ROOT 는 오타 경로 /home1/irteam/data-vol1/src/calra).
+export CARLA_ROOT=${B2D_CARLA_ROOT:-/home1/irteam/data-vol1/src/carla}
 export CARLA_SERVER=${CARLA_ROOT}/CarlaUE4.sh
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI/carla

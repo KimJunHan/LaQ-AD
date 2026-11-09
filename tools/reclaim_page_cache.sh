@@ -19,8 +19,8 @@
 #
 #   사용법: nohup bash tools/reclaim_page_cache.sh [주기초=1200] &
 set -u
-cd /workspace/src/HiP-AD
-PY=/opt/anaconda3/envs/hipad_bw/bin/python
+cd /home1/irteam/data-vol1/src/HiP-AD
+PY=/home1/irteam/data-vol1/anaconda3/envs/hipad_bw/bin/python
 INTERVAL=${1:-1200}
 LOG=results/page_cache_reclaim.log
 

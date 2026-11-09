@@ -26,7 +26,7 @@ def create_video(images_folder, output_video, fps):
 
 if __name__ == '__main__':
     fps = 10
-    folder_dir = '/workspace/src/HiP-AD/evaluation/hipad_b2d_stage2'
+    folder_dir = '/home1/irteam/data-vol1/src/HiP-AD/evaluation/hipad_b2d_stage2'
 
     for folder_path in glob.glob(folder_dir + '/*'):
         if os.path.isdir(folder_path):

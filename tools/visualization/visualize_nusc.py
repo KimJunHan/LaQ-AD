@@ -165,7 +165,7 @@ def build_scene_index(nusc):
 def get_future_ego_in_lidar(info, future_infos, n_future=6):
     """info 시점 lidar 좌표계 기준 미래 ego 위치 (N, 3). info 자신 제외."""
     import numpy as np
-    from mmdet3d_plugin.datasets.nuscenes_mini_dataset import _quat_to_rot
+    from mmdet3d_plugin.models.loader.nuscenes.dataset import _quat_to_rot
     # current lidar → global
     lidar2ego_R = _quat_to_rot(info["lidar2ego_rotation"])
     lidar2ego_t = np.asarray(info["lidar2ego_translation"])
@@ -388,7 +388,7 @@ def render_one_sample(info, result, dataset, point_cloud_range, score_thresh=0.2
         cam_paths.append(p)
 
     # build lidar2img per cam
-    from mmdet3d_plugin.datasets.nuscenes_mini_dataset import _quat_to_rot, _compose_rt
+    from mmdet3d_plugin.models.loader.nuscenes.dataset import _quat_to_rot, _compose_rt
     lidar2ego = _compose_rt(_quat_to_rot(info["lidar2ego_rotation"]),
                             np.asarray(info["lidar2ego_translation"]))
     #수정: vector map 용 — lidar2global + 해당 location 의 NuScenesMap (실패 시 None → map 생략)
@@ -571,7 +571,7 @@ def main():
     ap.add_argument("--fps", type=int, default=2)
     #수정: 3-trajectory viz
     ap.add_argument("--qwen-ckpt", default=None, help="qwen_traj_train.py 산출 traj_proj.pth")
-    ap.add_argument("--qwen-path", default="/workspace/src/HiP-AD/ckpts/qwen2-vl-2b")
+    ap.add_argument("--qwen-path", default="/home1/irteam/data-vol1/src/HiP-AD/ckpts/qwen2-vl-2b")
     ap.add_argument("--hipad-ckpt", default=None, help="hipad_traj_train.py 산출 hipad_traj.pth")
     ap.add_argument("--hipad-detector-ckpt", default=None, help="HiP-AD iter_*.pth")
     args = ap.parse_args()
@@ -622,7 +622,7 @@ def main():
     if args.qwen_ckpt and os.path.exists(args.qwen_ckpt):
         try:
             import torch
-            from mmdet3d_plugin.models.qwen_traj_generator import QwenTrajectoryGenerator
+            from mmdet3d_plugin.models.encoder.vlm_qwen2vl.qwen_traj_generator import QwenTrajectoryGenerator
             from transformers import AutoProcessor
             qg = QwenTrajectoryGenerator(qwen_model_path=args.qwen_path, embed_dim=1536,
                                          traj_ts=6, traj_dim=2, freeze_qwen=True,

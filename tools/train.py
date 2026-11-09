@@ -132,6 +132,10 @@ def main():
     # set cudnn_benchmark
     if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
+    # 수정(2026-10-10): 행렬곱 TF32 를 config 로 명시 제어(기본 False = 기존 fp32 동작 유지). 합성곱은 cuDNN 기본 TF32.
+    #   HiP-AD 원본은 fp16 혼합 정밀도(loss_scale 32)였다. 켤지 여부는 사용자 결정.
+    if cfg.get("tf32_matmul", False):
+        torch.backends.cuda.matmul.allow_tf32 = True
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:
@@ -139,7 +143,9 @@ def main():
         cfg.work_dir = args.work_dir
     elif cfg.get("work_dir", None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
-        cfg.work_dir = osp.join("./work_dirs", osp.splitext(osp.basename(args.config))[0])
+        # 수정(2026-10-15): config 가 configs/<데이터>/stage<N>/train.py 로 옮겨져 파일명이 run 을 구분하지 못한다
+        #   → config 의 run_name(예: hipad_nusc_laq_stage1)이 있으면 그것을 쓴다.
+        cfg.work_dir = osp.join("./work_dirs", cfg.get("run_name") or osp.splitext(osp.basename(args.config))[0])
     if args.resume_from is not None:
         cfg.resume_from = args.resume_from
     if args.gpu_ids is not None:
@@ -195,7 +201,11 @@ def main():
     # create work_dir
     mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
     # dump config
-    cfg.dump(osp.join(cfg.work_dir, osp.basename(args.config)))
+    # 수정(2026-10-15): run_name 이 있으면 덤프 파일명을 종전 규약(hipad_<데이터>_laq_stage<N>[_nodiff]_<train|...>.py)으로.
+    _stem = osp.splitext(osp.basename(args.config))[0]
+    _dump = (f"{cfg.run_name}_{_stem}.py".replace("_nodiff_nodiff_", "_nodiff_")
+             if cfg.get("run_name") else osp.basename(args.config))
+    cfg.dump(osp.join(cfg.work_dir, _dump))
     # init the logger before other steps
     timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     log_file = osp.join(cfg.work_dir, f"{timestamp}.log")
@@ -225,7 +235,11 @@ def main():
             f"Set random seed to {args.seed}, "
             f"deterministic: {args.deterministic}"
         )
-        set_random_seed(args.seed, deterministic=args.deterministic)
+        # 수정(2026-10-30): DDP 검토 반영 — config seed_rank_offset=True 면 rank 마다 seed+rank 로 주 프로세스 난수를 둔다
+        #   (같은 seed 면 4 rank 의 샘플러 증강(get_augmentation)·dropout 이 처음 시퀀스에서 똑같아진다). 샘플러 장면 순열
+        #   (cfg.seed → sync_random_seed)과 worker seed(rank 포함)는 그대로. 초기 가중치는 DDP 가 rank 0 것을 방송한다. 1 GPU 는 영향 없음.
+        _seed = args.seed + (get_dist_info()[0] if cfg.get("seed_rank_offset", False) else 0)
+        set_random_seed(_seed, deterministic=args.deterministic)
     cfg.seed = args.seed
     meta["seed"] = args.seed
     meta["exp_name"] = osp.basename(args.config)

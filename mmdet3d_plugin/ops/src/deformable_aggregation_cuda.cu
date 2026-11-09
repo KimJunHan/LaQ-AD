@@ -1,6 +1,7 @@
 
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAException.h>  // 수정(2026-11-05): 사용자 결정 "검토해서 연산시간 줄이자" — C10_CUDA_KERNEL_LAUNCH_CHECK 용
 #include <cuda.h>
 #include <cuda_runtime.h>
 
@@ -280,12 +281,17 @@ void deformable_aggregation(
     int num_groups
 ) {
     const long long num_kernels = (long long)batch_size * num_pts * num_embeds * num_anchors * num_cams * num_scale;  // 수정: int64
+    // 수정(2026-11-05): 사용자 결정 "검토해서 연산시간 줄이자" — 현재 스트림(at::cuda::getCurrentCUDAStream)에 실행.
+    //   종전에는 스트림 인자 없이 legacy 기본 스트림에 올려 CUDA Graph 캡처(비기본 스트림)에서 커널이 그래프에 들어가지 않고
+    //   replay 결과가 틀렸다(검토 재현: 최대 오차 32.5). 커널·격자·블록 크기는 같고 eager 에서는 같은 순서로 실행된다.
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
     deformable_aggregation_kernel
-        <<<(int)ceil(((double)num_kernels/128)), 128>>>(
+        <<<(int)ceil(((double)num_kernels/128)), 128, 0, stream>>>(
         num_kernels, output,
         mc_ms_feat, spatial_shape, scale_start_index, sample_location, weights,
         batch_size, num_cams, num_feat, num_embeds, num_scale, num_anchors, num_pts, num_groups
     );
+    C10_CUDA_KERNEL_LAUNCH_CHECK();  // 수정(2026-11-05): 사용자 결정 "검토해서 연산시간 줄이자" — 실행 오류를 즉시 보고(종전에는 다음 동기화 지점까지 숨었다)
 }
 
 
@@ -309,11 +315,14 @@ void deformable_aggregation_grad(
   int num_groups
 ) {
     const long long num_kernels = (long long)batch_size * num_pts * num_embeds * num_anchors * num_cams * num_scale;  // 수정: int64
+    // 수정(2026-11-05): 사용자 결정 "검토해서 연산시간 줄이자" — 순전파와 같이 현재 스트림에 실행(역전파도 autograd 가 정한 스트림을 따른다).
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
     deformable_aggregation_grad_kernel
-        <<<(int)ceil(((double)num_kernels/128)), 128>>>(
+        <<<(int)ceil(((double)num_kernels/128)), 128, 0, stream>>>(
         num_kernels,
         mc_ms_feat, spatial_shape, scale_start_index, sample_location, weights,
         grad_output, grad_mc_ms_feat, grad_sampling_location, grad_weights,
         batch_size, num_cams, num_feat, num_embeds, num_scale, num_anchors, num_pts, num_groups
     );
+    C10_CUDA_KERNEL_LAUNCH_CHECK();  // 수정(2026-11-05): 사용자 결정 "검토해서 연산시간 줄이자" — 실행 오류 즉시 보고
 }

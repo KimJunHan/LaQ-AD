@@ -234,7 +234,7 @@ def make_qwen_panel(reason, H, W=300):
 def build_qwen_predictor(qwen_ckpt, qwen_path, data_root, device="cuda"):
     """visualize_nusc.py 미러링 — 6 B2D cam → (traj (6,2) lidar, reasoning str)."""
     import torch as _t
-    from mmdet3d_plugin.models.qwen_traj_generator import QwenTrajectoryGenerator
+    from mmdet3d_plugin.models.encoder.vlm_qwen2vl.qwen_traj_generator import QwenTrajectoryGenerator
     from transformers import AutoProcessor
     from PIL import Image as _PIL
     qg = QwenTrajectoryGenerator(qwen_model_path=qwen_path, embed_dim=1536, traj_ts=6,
@@ -324,7 +324,7 @@ def get_gt_map(info, map_infos, map_element_class, pcr, max_dist=50.0):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="projects/configs/hipad_b2d_stage2.py")
+    ap.add_argument("--config", default="configs/reference/hipad_base_b2d_stage2.py")  # 수정(2026-10-15): 존재하지 않던 기본 경로를 기준 config 로
     ap.add_argument("--result", required=True, help="dump_infer.py results.pkl")
     ap.add_argument("--scene", required=True, help="folder basename, e.g. AccidentTwoWays_Town12_Route1444_Weather0")
     ap.add_argument("--out-dir", default="vis_b2d")  #수정: 폴더 명명 규칙 — B2D 시각화는 vis_b2d
@@ -338,7 +338,7 @@ def main():
     ap.add_argument("--fps", type=int, default=10)
     # 수정: VLA — Qwen2-VL 6cam → 궤적(traj_proj) + reasoning. visualize_nusc.py 미러링.
     ap.add_argument("--qwen-ckpt", default=None, help="qwen_traj_train_b2d.py 산출 traj_proj.pth")
-    ap.add_argument("--qwen-path", default="/workspace/src/HiP-AD/ckpts/qwen2-vl-2b")
+    ap.add_argument("--qwen-path", default="/home1/irteam/data-vol1/src/HiP-AD/ckpts/qwen2-vl-2b")
     args = ap.parse_args()
 
     cfg = Config.fromfile(args.config)

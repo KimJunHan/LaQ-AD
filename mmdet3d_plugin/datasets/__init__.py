@@ -1,12 +1,5 @@
-from .builder import *
-from .samplers import *
-from .pipelines import *
-from .bench2drive_dataset import Bench2DriveDataset
-#수정: VLA-v0 — nuScenes-mini light dataset
-from .nuscenes_mini_dataset import NuScenesMiniDataset
-
-__all__ = [
-    "Bench2DriveDataset",
-    "NuScenesMiniDataset",
-    "custom_build_dataset",
-]
+# 수정(2026-10-15): 데이터셋 코드는 models/loader 로 옮겼다. 이 패키지는 하위 호환을 위해 같은 객체를 다시 내보낸다
+#   (모듈을 두 번 로드하지 않으므로 레지스트리 이중 등록이 없다). 새 코드는 models.loader 를 직접 import 할 것.
+from ..models.loader import *
+from ..models.loader import __all__
+from ..models.loader.builder import build_dataloader, custom_build_dataset

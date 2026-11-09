@@ -6,7 +6,7 @@
 # 두 심볼릭 링크를 가진 RUN_DIR 에서 실행한다.
 set -u
 
-HIP=/workspace/src/HiP-AD
+HIP=/home1/irteam/data-vol1/src/HiP-AD
 DATA="$HIP/data/bench2drive/v1"
 TOOLS="$HIP/bench2drive/tools"
 RUN_DIR=/tmp/b2dvis            # ./maps, ./leaderboard 링크가 있는 작업 디렉토리

@@ -7,7 +7,7 @@
 #          손실이 0 인 stage1 에서도 앵커는 실주행 분포여야 한다.
 #          (nuScenes 는 계획 '평가'를 하지 않는다 — 평가는 det/map/track/motion 만.)
 #
-#   [규약] models/plan/instance_bank.py 의 로딩 규칙:
+#   [규약] models/decoder/temporal_bank/plan_bank.py 의 로딩 규칙:
 #            3D 앵커 (M, T, 2) -> reshape(M, T*2)
 #            4D 앵커 (C, M, T, 2) -> reshape(C*M, T*2)
 #          config 는 ego_fut_cmd=1, ego_fut_mode=48 이므로 총 48 모드가 필요하다.

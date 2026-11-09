@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 #수정(2026-09-15): 한 파일 안에서 mmdet3d_plugin 과 projects.mmdet3d_plugin 두 이름이
 #  섞여 있으면 같은 패키지가 두 번 로드되어 레지스트리 이중 등록으로 죽는다. 한 이름으로 통일.
 import projects.mmdet3d_plugin  # noqa
-from projects.mmdet3d_plugin.datasets.nuscenes_mini_dataset import NuScenesMiniDataset
+from projects.mmdet3d_plugin.models.loader.nuscenes.dataset import NuScenes3DDataset  # 수정(2026-10-15): 경로 이동·클래스 이름 변경(구 datasets/nuscenes_mini_dataset.NuScenesMiniDataset)
 from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
 
 
@@ -44,14 +44,17 @@ def load_six_cams(info, data_root):
             p = "samples/" + p.split("samples/", 1)[1]
         if not os.path.isabs(p):
             p = os.path.join(data_root, p)
-        imgs.append(Image.open(p).convert("RGB") if os.path.exists(p)
-                    else Image.new("RGB", (1600, 900), (0, 0, 0)))
+        #수정(2026-10-09): 누락 영상을 검은 영상으로 조용히 대체하던 분기 제거(근본수정 원칙 — 숨기지 않고 실패).
+        #   기존 캐시(qwen, qwen_l18, qwen3d*)는 영향 없음: train+val 204,894장 전부 존재 실측(누락 0).
+        if not os.path.exists(p):
+            raise FileNotFoundError(f"카메라 영상 없음: {p}")
+        imgs.append(Image.open(p).convert("RGB"))
     return imgs
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--qwen-path", default="/workspace/src/HiP-AD/ckpts/qwen2-vl-2b")
+    ap.add_argument("--qwen-path", default="/home1/irteam/data-vol1/src/HiP-AD/ckpts/qwen2-vl-2b")
     ap.add_argument("--data-root", default="data/nuscenes")
     ap.add_argument("--ann-files", nargs="+",
                     default=["data/nuscenes/nuscenes_infos_train.pkl",
@@ -65,7 +68,10 @@ def main():
     #  skip-existing 와 합쳐져 여러 인스턴스 안전 병렬(샤드 겹쳐도 idempotent).
     ap.add_argument("--shard", default="0/1", help='"i/n": uniq 토큰을 stride n 으로 i 번째만 처리')
     ap.add_argument("--layers", default="", help="저장할 hidden_states 계층들(쉼표). 빈값=마지막 계층(종전 동작)")
+    ap.add_argument("--instruction-file", default=None,
+                    help="수정(2026-09-22): 프롬프트 교체 — 3D-LoRA 캐시는 학습과 동일한 공간 instruction 필요. 미지정=종전 INSTRUCTION")
     args = ap.parse_args()
+    instr = open(args.instruction_file).read().strip() if args.instruction_file else INSTRUCTION
 
     os.makedirs(args.out_dir, exist_ok=True)
 
@@ -85,7 +91,7 @@ def main():
     for af in args.ann_files:
         if not os.path.exists(af):
             print(f"skip missing {af}"); continue
-        ds = NuScenesMiniDataset(data_root=args.data_root, ann_file=af,
+        ds = NuScenes3DDataset(data_root=args.data_root, ann_file=af,
                                   pipeline=None, modality=dict(use_camera=True, use_lidar=False))
         all_infos.extend(ds.data_infos)
     print(f"total samples (train+val merged, dedup by token): {len(all_infos)}")
@@ -121,7 +127,7 @@ def main():
         imgs = load_six_cams(info, args.data_root)
         msgs = [{"role": "user", "content":
                     [{"type": "image", "image": im} for im in imgs] +
-                    [{"type": "text", "text": INSTRUCTION}]}]
+                    [{"type": "text", "text": instr}]}]
         text = processor.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
         inp = processor(text=[text], images=imgs, return_tensors="pt", padding=True)
         inp = {k_: v.to(args.device) for k_, v in inp.items()}

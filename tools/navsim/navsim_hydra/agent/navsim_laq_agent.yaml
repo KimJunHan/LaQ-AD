@@ -1,0 +1,9 @@
+# 수정(2026-10-09): LaQ-AD NAVSIM 사전 계산 궤적 에이전트(hydra agent 그룹). constant_velocity_agent.yaml 과 같은 형식.
+_target_: navsim_laq_agent.NavsimLaqAgent
+_convert_: 'all'
+pred_path: ???
+trajectory_sampling:
+  _target_: nuplan.planning.simulation.trajectory.trajectory_sampling.TrajectorySampling
+  _convert_: 'all'
+  time_horizon: 4
+  interval_length: 0.5

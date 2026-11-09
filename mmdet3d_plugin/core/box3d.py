@@ -1,3 +1,2 @@
-X, Y, Z, W, L, H, SIN_YAW, COS_YAW, VX, VY, VZ = list(range(11))  # undecoded
-CNS, YNS = 0, 1  # centerness and yawness indices in quality
-YAW = 6  # decoded
+# 수정(2026-10-15): 상수 정의는 models/common/box3d.py 로 옮겼다. 하위 호환용 재노출.
+from ..models.common.box3d import *

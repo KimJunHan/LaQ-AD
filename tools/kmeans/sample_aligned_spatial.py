@@ -1,5 +1,5 @@
 import numpy as np
-from mmdet3d_plugin.datasets.pipelines.vectorize_numpy import VectorizeMapNumpy
+from mmdet3d_plugin.models.loader.pipelines.vectorize_numpy import VectorizeMapNumpy
 
 ego_fut_ts = 6
 

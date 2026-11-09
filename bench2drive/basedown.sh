@@ -8,6 +8,6 @@ else
   echo "huggingface-hub is already installed."
 fi
 
-mkdir /workspace/src/HiP-AD/bench2drive/Bench2Drive-base
+mkdir /home1/irteam/data-vol1/src/HiP-AD/bench2drive/Bench2Drive-base
 
-hf download rethinklab/Bench2Drive --repo-type=dataset --local-dir /workspace/src/HiP-AD/bench2drive/Bench2Drive-base
+hf download rethinklab/Bench2Drive --repo-type=dataset --local-dir /home1/irteam/data-vol1/src/HiP-AD/bench2drive/Bench2Drive-base

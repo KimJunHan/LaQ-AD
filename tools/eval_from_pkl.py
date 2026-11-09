@@ -48,7 +48,23 @@ def main():
     cfg.data.test.test_mode = True
     dataset = build_dataset(cfg.data.test)
 
-    outputs = mmcv.load(args.pkl)
+    # 수정(2026-10-02): CUDA 텐서가 담긴 pkl 을 CPU 에서도 읽는다(평가는 CPU 작업이므로
+    #   GPU 를 점유하지 않고 학습과 병행할 수 있어야 한다).
+    def _load_pkl_cpu(path):
+        import io, pickle, torch
+        class _CPUUnpickler(pickle.Unpickler):
+            def find_class(self, module, name):
+                if module == "torch.storage" and name == "_load_from_bytes":
+                    return lambda b: torch.load(io.BytesIO(b), map_location="cpu")
+                return super().find_class(module, name)
+        with open(path, "rb") as f:
+            return _CPUUnpickler(f).load()
+
+    try:
+        outputs = mmcv.load(args.pkl)
+    except (RuntimeError, AssertionError) as e:
+        print(f"[eval] 기본 로더 실패({type(e).__name__}) → CPU 매핑 로더로 재시도", flush=True)
+        outputs = _load_pkl_cpu(args.pkl)
     print(f"[eval] {args.pkl} 로드 완료 — {len(outputs)} 샘플")
 
     eval_kwargs = cfg.get("evaluation", {}).copy()

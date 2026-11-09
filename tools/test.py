@@ -28,7 +28,7 @@ from mmdet.datasets import replace_ImageToTensor, build_dataset
 from mmdet.datasets import build_dataloader as build_dataloader_origin
 from mmdet.models import build_detector
 
-from projects.mmdet3d_plugin.datasets.builder import build_dataloader  #수정(2026-09-15): projects. 경로로 복원 — 19:09 외부 일괄편집이 두 번째 패키지 로드(이중 등록)를 유발
+from projects.mmdet3d_plugin.models.loader.builder import build_dataloader  #수정(2026-10-15): 경로 이동 datasets/builder.py → models/loader/builder.py. (2026-09-15: projects. 경로 유지 — 이중 등록 방지)
 from projects.mmdet3d_plugin.apis.test import custom_multi_gpu_test  #수정(2026-09-15): projects. 경로로 복원 — 19:09 외부 일괄편집이 두 번째 패키지 로드(이중 등록)를 유발
 
 
@@ -220,8 +220,9 @@ def main():
     # set work dir
     if cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
+        # 수정(2026-10-15): config 의 run_name 이 있으면 그것을 쓴다(configs/<데이터>/stage<N>/test.py 는 파일명이 run 을 구분하지 못함).
         cfg.work_dir = osp.join('./work_dirs',
-                                osp.splitext(osp.basename(args.config))[0]) 
+                                cfg.get('run_name') or osp.splitext(osp.basename(args.config))[0])
     mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
     cfg.data.test.work_dir = cfg.work_dir
     print('work_dir: ',cfg.work_dir)

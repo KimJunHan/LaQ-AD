@@ -2,7 +2,7 @@ ARG ROS_DISTRO
 
 FROM ros:$ROS_DISTRO-ros-base
 
-WORKDIR /workspace
+WORKDIR /home1/irteam/data-vol1
 
 ENV DEBIAN_FRONTEND "noninteractive"
 
@@ -37,11 +37,11 @@ RUN apt-get update; \
   fi; \
   rm -rf /var/lib/apt/lists/*
 
-ENV CARLA_ROOT "/workspace/CARLA"
-ENV SCENARIO_RUNNER_ROOT "/workspace/scenario_runner"
-ENV LEADERBOARD_ROOT "/workspace/leaderboard"
-ENV CARLA_ROS_BRIDGE_ROOT "/workspace/carla_ros_bridge"
-ENV TEAM_CODE_ROOT "/workspace/team_code"
+ENV CARLA_ROOT "/home1/irteam/data-vol1/CARLA"
+ENV SCENARIO_RUNNER_ROOT "/home1/irteam/data-vol1/scenario_runner"
+ENV LEADERBOARD_ROOT "/home1/irteam/data-vol1/leaderboard"
+ENV CARLA_ROS_BRIDGE_ROOT "/home1/irteam/data-vol1/carla_ros_bridge"
+ENV TEAM_CODE_ROOT "/home1/irteam/data-vol1/team_code"
 
 COPY PythonAPI ${CARLA_ROOT}/PythonAPI
 COPY scenario_runner ${SCENARIO_RUNNER_ROOT}
@@ -57,7 +57,7 @@ COPY team_code ${TEAM_CODE_ROOT}
 # Install carla ros bridge
 RUN /bin/bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash; \
   apt-get update && rosdep update; \
-  cd /workspace/carla_ros_bridge; \
+  cd /home1/irteam/data-vol1/carla_ros_bridge; \
   rm -rf build devel install log; \
   rosdep install --from-paths src --ignore-src -r -y; \
   if [ "$ROS_VERSION" = "1" ]; then \
@@ -73,7 +73,7 @@ RUN /bin/bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash; \
 # Install agent
 RUN /bin/bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash; \
   apt-get update && rosdep update; \
-  cd /workspace/team_code; \
+  cd /home1/irteam/data-vol1/team_code; \
   rm -rf build devel install log; \
   rosdep install --from-paths src --ignore-src -r -y; \
   if [ "$ROS_VERSION" = "1" ]; then \
@@ -84,8 +84,8 @@ RUN /bin/bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash; \
   rm -rf build devel log; \
   rm -rf /var/lib/apt/lists/*'
 
-RUN mkdir -p /workspace/results
-RUN chmod +x /workspace/leaderboard/run_leaderboard.sh
+RUN mkdir -p /home1/irteam/data-vol1/results
+RUN chmod +x /home1/irteam/data-vol1/leaderboard/run_leaderboard.sh
 
 ENV PYTHONPATH "${CARLA_ROOT}/PythonAPI/carla":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
@@ -125,7 +125,7 @@ ENV CHALLENGE_TRACK_CODENAME MAP
 
 ENV ROUTES ${LEADERBOARD_ROOT}/data/routes_training.xml
 ENV REPETITIONS 1
-ENV CHECKPOINT_ENDPOINT /workspace/results/results.json
+ENV CHECKPOINT_ENDPOINT /home1/irteam/data-vol1/results/results.json
 ENV DEBUG_CHALLENGE 0
 
 # Agent sources
